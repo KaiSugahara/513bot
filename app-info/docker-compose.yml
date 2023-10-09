@@ -1,0 +1,16 @@
+version: "3"
+services:
+  513bot-app-info:
+    image: 513bot-app-info
+    build:
+      context: .
+    container_name: 513bot-app-info
+    volumes:
+      - ./app.py:/app.py:ro
+    restart: always
+    networks:
+      - 513bot-network
+networks:
+  513bot-network:
+    name: 513bot-network
+    external: true
