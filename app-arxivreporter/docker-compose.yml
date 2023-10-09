@@ -1,0 +1,20 @@
+version: "3"
+services:
+  513bot-app-arxivreporter:
+    image: 513bot-app-arxivreporter
+    build:
+      context: .
+    container_name: 513bot-app-arxivreporter
+    volumes:
+      - ./app.py:/app.py:ro
+      - ./.env:/.env:ro
+    environment:
+      - CHANNEL=$CHANNEL
+      - OPENAI_API_KEY=$OPENAI_API_KEY
+    restart: always
+    networks:
+      - 513bot-network
+networks:
+  513bot-network:
+    name: 513bot-network
+    external: true
