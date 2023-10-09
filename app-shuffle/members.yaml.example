@@ -1,0 +1,11 @@
+all:
+    - Mr. A
+    - Mr. B
+    - Mr. C
+    - Mr. D
+team0:
+    - Mr. A
+    - Mr. B
+team1:
+    - Mr. C
+    - Mr. D

@@ -1,0 +1,17 @@
+version: "3"
+services:
+  513bot-app-shuffle:
+    image: 513bot-app-shuffle
+    build:
+      context: .
+    container_name: 513bot-app-shuffle
+    volumes:
+      - ./app.py:/app.py:ro
+      - ./members.yaml:/members.yaml:ro
+    restart: always
+    networks:
+      - 513bot-network
+networks:
+  513bot-network:
+    name: 513bot-network
+    external: true
