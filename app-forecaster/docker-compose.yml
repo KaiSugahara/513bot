@@ -1,0 +1,20 @@
+version: "3"
+services:
+  513bot-app-forecaster:
+    image: 513bot-app-forecaster
+    build:
+      context: .
+    container_name: 513bot-app-forecaster
+    volumes:
+      - ./app.py:/app.py:ro
+      - ./.env:/.env:ro
+    environment:
+      - CHANNEL=$CHANNEL
+      - CITY=$CITY
+    restart: always
+    networks:
+      - 513bot-network
+networks:
+  513bot-network:
+    name: 513bot-network
+    external: true
