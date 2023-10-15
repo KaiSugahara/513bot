@@ -1,6 +1,7 @@
 import os
 import requests
 from dotenv import load_dotenv
+import re
 
 if __name__ == '__main__':
 
@@ -16,11 +17,22 @@ if __name__ == '__main__':
             }
         )
         if not responce.ok: print("Failed to get weather inf.")
+        
+        # Extract Required Inf.
+        forecast = responce.json()
+        cityName = forecast["location"]["city"]
+        day = forecast["forecasts"][0]["dateLabel"]
+        telop = forecast["forecasts"][0]["telop"]
+        minTemp = val if (val := forecast["forecasts"][0]["temperature"]["min"]["celsius"]) is not None else "-"
+        maxTemp = val if (val := forecast["forecasts"][0]["temperature"]["max"]["celsius"]) is not None else "-"
+        description = forecast["description"]["text"]
+
+        # Format the Description
+        description = re.sub("\n\n【関東甲信地方】(.*)", "", description, flags=(re.MULTILINE | re.DOTALL))
+        description = "> " + description.replace("\n\n", "\n").replace("\u3000", "").replace("\n", "\n> ")
 
         # Make a message
-        cityName = (responce.json())["location"]["city"]
-        result = (responce.json())["forecasts"][0]
-        message = f'おはようございます！\n{result["dateLabel"]}の{cityName}の天気は {result["telop"]} 、最高気温は {result["temperature"]["max"]["celsius"]} ℃、最低気温は {result["temperature"]["min"]["celsius"]} ℃ です。'
+        message = f'おはようございます。\n{cityName}の{day}の天気は {telop} 、最高気温は {maxTemp} ℃、最低気温は {minTemp} ℃ です。\n{description}'
 
         # Send the message to Slack
         requests.get(
