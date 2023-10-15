@@ -40,7 +40,7 @@ def app_shuffle():
     
     # Send a message to Slack
     res = requests.get(
-        url="http://513bot-core-send",
+        url="http://513bot-core-sender",
         params={
             "channel": channel,
             "text": message,

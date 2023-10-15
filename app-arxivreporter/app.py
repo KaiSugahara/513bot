@@ -112,7 +112,7 @@ if __name__ == '__main__':
         def send2slack( text ):
             
             requests.get(
-                url = "http://513bot-core-send",
+                url = "http://513bot-core-sender",
                 params = {
                     "channel": os.getenv("CHANNEL"),
                     "text": text,
