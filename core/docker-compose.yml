@@ -1,26 +1,26 @@
 version: "3"
 services:
-  513bot-core-receive:
-    image: 513bot-core-receive
+  513bot-core-receiver:
+    image: 513bot-core-receiver
     build:
       context: .
       dockerfile: ./receive/Dockerfile
     environment:
       - SLACK_BOT_TOKEN=$SLACK_BOT_TOKEN
       - SLACK_APP_TOKEN=$SLACK_APP_TOKEN
-    container_name: 513bot-core-receive
+    container_name: 513bot-core-receiver
     volumes:
       - ./receive/app.py:/app.py:ro
     restart: always
-  513bot-core-send:
-    image: 513bot-core-send
+  513bot-core-sender:
+    image: 513bot-core-sender
     build:
       context: .
       dockerfile: ./send/Dockerfile
     environment:
       - SLACK_BOT_TOKEN=$SLACK_BOT_TOKEN
       - SLACK_APP_TOKEN=$SLACK_APP_TOKEN
-    container_name: 513bot-core-send
+    container_name: 513bot-core-sender
     volumes:
       - ./send/app.py:/app.py:ro
     restart: always

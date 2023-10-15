@@ -24,7 +24,7 @@ if __name__ == '__main__':
 
         # Send the message to Slack
         requests.get(
-            url = "http://513bot-core-send",
+            url = "http://513bot-core-sender",
             params = {
                 "channel": os.getenv("CHANNEL"),
                 "text": message,
