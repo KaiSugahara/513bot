@@ -2,12 +2,17 @@ import os
 import requests
 from dotenv import load_dotenv
 import re
+import datetime
 
 if __name__ == '__main__':
 
     try:
         
         load_dotenv("/.env")
+        
+        # Get Current Time
+        currentTime = datetime.datetime.now()
+        week_map = {0: "月", 1: "火", 2: "水", 3: "木", 4: "金", 5: "土", 6: "日",}
         
         # Get Weather Information
         responce = requests.get(
@@ -32,7 +37,7 @@ if __name__ == '__main__':
         description = "> " + description.replace("\n\n", "\n").replace("\u3000", "").replace("\n", "\n> ")
 
         # Make a message
-        message = f'おはようございます。\n{cityName}の{day}の天気は {telop} 、最高気温は {maxTemp} ℃、最低気温は {minTemp} ℃ です。\n{description}'
+        message = f'おはようございます。{week_map.get(currentTime.weekday())}曜日です！\n{cityName}の天気は {telop} 、最高気温は {maxTemp} ℃、最低気温は {minTemp} ℃ の予報です。\n{description}'
 
         # Send the message to Slack
         requests.get(
