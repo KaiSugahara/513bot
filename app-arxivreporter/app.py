@@ -7,6 +7,7 @@ import requests
 from tqdm import tqdm
 from dotenv import load_dotenv
 import json
+import time
 
 system = """与えられた論文のアブストラクトを日本語で最大3個の箇条書き（体言止め）でまとめ，以下のフォーマットで出力してください．
 ```
@@ -15,7 +16,7 @@ system = """与えられた論文のアブストラクトを日本語で最大3�
 - 要点3
 ```"""
 
-def get_abstract_summary(abstract, debug_mode=True):
+def get_abstract_summary(abstract):
         
     """
         func: OpenAIのAPIを利用して，与えられたAbstractを要約
@@ -26,12 +27,8 @@ def get_abstract_summary(abstract, debug_mode=True):
             
     """
 
-    if debug_mode:
-
-        summary = "• 要点A\n• 要点B\n• 要点C"
-
-    else:
-
+    # Request to openai
+    try:
         response = openai.ChatCompletion.create(
             model="gpt-3.5-turbo",
             messages=[
@@ -40,10 +37,16 @@ def get_abstract_summary(abstract, debug_mode=True):
             ],
             temperature=0.25,
         )
-        summary = response["choices"][0]["message"]["content"]
-        
-        # Convert to List
-        summary = [line.replace("- ", "") for line in summary.split("\n")]
+    except Exception as e:
+        # Try again after 1800 sec. if openai has an error
+        time.sleep(1800)
+        return get_abstract_summary(abstract)
+    
+    # Extract content in the responce
+    summary = response["choices"][0]["message"]["content"]
+    
+    # Convert to List
+    summary = [line.replace("- ", "") for line in summary.split("\n")]
     
     return summary
 
@@ -59,37 +62,32 @@ if __name__ == '__main__':
         
         openai.api_key = os.getenv("OPENAI_API_KEY")
         
-        print("Done! Setup OpenAPI")
-        
         """
-            検索対象日を計算
+            Extract search target date
         """
         
         date = datetime.datetime.now(pytz.timezone('Asia/Tokyo')) - datetime.timedelta(days=7) # 7日前
         date = date.strftime("%Y%m%d")
         
-        print("対象日:", date)
-        
         """
-            記事の検索
+            Search papers in arXiv
         """
         
-        # クエリ: 検索カテゴリ
+        # Query regarding Category
         cats = ["cs.AI", "cs.IR", "cs.CV", "cs.SE", "cs.LG"]
         query_cat = "%28" + " OR ".join([f'cat:{cat}' for cat in cats]) + "%29"
         
-        # クエリ: 検索ワード
+        # Query regarding Keywords
         words = ["recommend", "recommendation", "recommender"]
         query_word = "%28" + " OR ".join([f'all:{w}' for w in words]) + "%29"
         
-        # クエリ: 検索対象日
+        # Query regarding Date
         query_date = f"submittedDate:[{date} TO {date}235959]"
         
-        # クエリを結合
+        # Join queries
         query = " AND ".join([query_cat, query_word, query_date])
-        print("クエリ文:\n", query)
         
-        # 検索
+        # Search
         search = arxiv.Search(
             query=query,
             sort_by=arxiv.SortCriterion.SubmittedDate,
@@ -98,7 +96,7 @@ if __name__ == '__main__':
         searchResults = list(arxiv.Client().results(search))
         
         """
-            検索結果を整形
+            Formatting search results
         """
         
         results = [
@@ -107,7 +105,7 @@ if __name__ == '__main__':
                 "url": result.links[0].href,
                 "time": result.published.strftime("%Y/%m/%d %H:%M"),
                 "authors": [author.name for author in result.authors],
-                "summary": get_abstract_summary(result.summary, debug_mode=False),
+                "summary": get_abstract_summary(result.summary),
             }
             for result in tqdm(searchResults)
         ]
