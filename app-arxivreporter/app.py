@@ -6,6 +6,46 @@ import os
 import requests
 from tqdm import tqdm
 from dotenv import load_dotenv
+import json
+
+system = """与えられた論文のアブストラクトを日本語で最大3個の箇条書き（体言止め）でまとめ，以下のフォーマットで出力してください．
+```
+- 要点1
+- 要点2
+- 要点3
+```"""
+
+def get_abstract_summary(abstract, debug_mode=True):
+        
+    """
+        func: OpenAIのAPIを利用して，与えられたAbstractを要約
+        args:
+            - abstract: アブストラクト, str
+        returns:
+            - summary: 要約文, str
+            
+    """
+
+    if debug_mode:
+
+        summary = "• 要点A\n• 要点B\n• 要点C"
+
+    else:
+
+        response = openai.ChatCompletion.create(
+            model="gpt-3.5-turbo",
+            messages=[
+                {'role': 'system', 'content': system},
+                {'role': 'user', 'content': abstract},
+            ],
+            temperature=0.25,
+        )
+        summary = response["choices"][0]["message"]["content"]
+        
+        # Convert to List
+        summary = [line.replace("- ", "") for line in summary.split("\n")]
+    
+    return summary
 
 if __name__ == '__main__':
 
@@ -19,42 +59,6 @@ if __name__ == '__main__':
         
         openai.api_key = os.getenv("OPENAI_API_KEY")
         
-        system = """与えられた論文のアブストラクトを日本語で最大3個の箇条書き（体言止め）でまとめ，以下のフォーマットで出力してください．
-        ```
-        • 要点1
-        • 要点2
-        • 要点3
-        ```"""
-        
-        def get_abstract_summary(abstract, debug_mode=True):
-        
-            """
-                func: OpenAIのAPIを利用して，与えられたAbstractを要約
-                args:
-                    - abstract: アブストラクト, str
-                returns:
-                    - summary: 要約文, str
-                    
-            """
-        
-            if debug_mode:
-        
-                summary = "• 要点A\n• 要点B\n• 要点C"
-        
-            else:
-        
-                response = openai.ChatCompletion.create(
-                    model="gpt-3.5-turbo",
-                    messages=[
-                        {'role': 'system', 'content': system},
-                        {'role': 'user', 'content': abstract},
-                    ],
-                    temperature=0.25,
-                )
-                summary = response["choices"][0]["message"]["content"]
-            
-            return summary
-        
         print("Done! Setup OpenAPI")
         
         """
@@ -63,6 +67,7 @@ if __name__ == '__main__':
         
         date = datetime.datetime.now(pytz.timezone('Asia/Tokyo')) - datetime.timedelta(days=7) # 7日前
         date = date.strftime("%Y%m%d")
+        
         print("対象日:", date)
         
         """
@@ -90,6 +95,7 @@ if __name__ == '__main__':
             sort_by=arxiv.SortCriterion.SubmittedDate,
             sort_order=arxiv.SortOrder.Descending,
         )
+        searchResults = list(arxiv.Client().results(search))
         
         """
             検索結果を整形
@@ -100,41 +106,111 @@ if __name__ == '__main__':
                 "title": result.title,
                 "url": result.links[0].href,
                 "time": result.published.strftime("%Y/%m/%d %H:%M"),
+                "authors": [author.name for author in result.authors],
                 "summary": get_abstract_summary(result.summary, debug_mode=False),
             }
-            for result in tqdm(list(search.results()))
+            for result in tqdm(searchResults)
         ]
         
         """
-            Slackに通知
+            Make Blocks for Slack
         """
         
-        def send2slack( text ):
-            
-            requests.get(
-                url = "http://513bot-core-sender",
-                params = {
-                    "channel": os.getenv("CHANNEL"),
-                    "text": text,
+        blocks = [
+            {
+                "type": "header",
+                "text": {
+                    "type": "plain_text",
+                    "text": f"{date[:4]}/{date[4:6]}/{date[6:]}に投稿されたarXiv論文（検索対象: 推薦システム）"
                 }
-            )
-        
-        send2slack( f"{date[:4]}/{date[4:6]}/{date[6:]}に投稿されたarXiv論文（検索対象: 推薦システム）" )
+            },
+        ]
         
         if len(results) > 0:
         
             for result in results:
-            
-                text = []
-            
-                text.append( f'<{result["url"]}|{result["title"]}> ({result["time"]})' )
-                text.append( result["summary"] )
-            
-                send2slack( "\n".join(text) )
+                
+                blocks += [
+                    {
+                        "type": "divider"
+                    },
+                    {
+                        "type": "section",
+                        "text": {
+                            "type": "mrkdwn",
+                            "text": "*"+result["title"]+"*"
+                        },
+                        "accessory": {
+                            "type": "button",
+                            "text": {
+                                "type": "plain_text",
+                                "text": "View"
+                            },
+                            "url": result["url"],
+                        }
+                    },
+                    {
+                        "type": "rich_text",
+                        "elements": [
+                            {
+                                "type": "rich_text_list",
+                                "style": "bullet",
+                                "elements": [
+                                    {
+                                        "type": "rich_text_section",
+                                        "elements": [
+                                            {
+                                                "type": "text",
+                                                "text": line,
+                                            }
+                                        ]
+                                    }
+                                    for line in result["summary"]
+                                ]
+                            }
+                        ]
+                    },
+                    {
+                        "type": "context",
+                        "elements": [
+                            {
+                                "type": "plain_text",
+                                "text": ", ".join(result["authors"]) + " (" + result["time"] + " UTC)",
+                            }
+                        ]
+                    },
+                ]
+                
+            blocks += [
+                {
+                    "type": "divider"
+                },
+            ]
         
         else:
+            
+            blocks += [
+                {
+                    "type": "section",
+                    "text": {
+                        "type": "plain_text",
+                        "text": "文献が見つかりませんでした :sob:",
+                        "emoji": True
+                    }
+                }
+            ]
         
-            send2slack( "文献が見つかりませんでした :sob:" )
+        """
+            Send Blocks to Slack
+        """
+        
+        requests.get(
+            url = "http://513bot-core-sender",
+            params = {
+                "channel": os.getenv("CHANNEL"),
+                "blocks": json.dumps(blocks),
+            }
+        )
     
     except Exception as e:
         
