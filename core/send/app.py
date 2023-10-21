@@ -15,14 +15,25 @@ def index():
     channel = request.args.get('channel', '')
     if channel == "": return "Bad Request: You must specify #channel", 400
     
-    # Get a message
+    # Get a text/blocks
     text = request.args.get('text', '')
+    blocks = request.args.get('blocks', '')
 
-    # Send the message
-    result = client.chat_postMessage(
-        channel = channel,
-        text = text,
-    )
+    # Send as message
+    if text != "":
+        result = client.chat_postMessage(
+            channel = channel,
+            text = text,
+        )
+    elif blocks != "":
+        result = client.chat_postMessage(
+            channel = channel,
+            blocks = blocks,
+        )
+    else:
+        return "Bad Request: You must specify 'text' or 'blocks'.", 400    
+    
+    # Check result of sending the messeage
     if result["ok"]:
         return "ok", 200
     

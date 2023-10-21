@@ -2,6 +2,7 @@ import random
 import yaml
 from flask import Flask, request
 import requests
+import json
 
 app = Flask(__name__)
 
@@ -19,6 +20,7 @@ def app_shuffle():
     # Get team names
     teamNames = request.args.get('args', '')
     teamNames = teamNames.split()
+    teamNames = [name.upper() for name in teamNames] # Convert team name to uppercase
 
     # Has at least 0 teams?
     if len(teamNames) == 0:
@@ -28,22 +30,44 @@ def app_shuffle():
     try:
         with open("./members.yaml", "r") as f:
             members = yaml.safe_load(f.read())
+            members = {key.upper(): val for key, val in members.items()} # Convert team name to uppercase
     except FileNotFoundError:
         return "[app-shuffle] Error: members.yaml does not exist", 400
 
-    # Shuffle members and save as a message
-    message = []
+    # Shuffle members and save as Block
+    blocks = []
     for team_name in teamNames:
-        if team_name not in members.keys(): return "[app-shuffle] Error: You have specified a team name that does not exist in members.yml", 400
-        message.append( f"{team_name}: " + "`" + "` → `".join( random.sample(members[team_name], len(members[team_name])) ) + "`")
-    message = "\n".join(message)
+        # Check whether the team name exist
+        if team_name not in members.keys():
+            return "[app-shuffle] Error: You have specified a team name that does not exist in members.yml", 400
+        # Add block
+        blocks += [
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "plain_text",
+                        "text": f"Group {team_name}:",
+                    }
+                ]
+            },
+            {
+                "type": "context",
+                "elements": [
+                    {
+                        "type": "mrkdwn",
+                        "text": "`" + "` → `".join( random.sample(members[team_name], len(members[team_name])) ) + "`",
+                    }
+                ]
+            },
+        ]
     
-    # Send a message to Slack
-    res = requests.get(
+    # Send Blocks to Slack
+    requests.get(
         url="http://513bot-core-sender",
         params={
             "channel": channel,
-            "text": message,
+            "blocks": json.dumps(blocks),
         }
     )
     
