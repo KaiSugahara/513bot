@@ -7,7 +7,9 @@ services:
     container_name: 513bot-app-arxivreporter
     volumes:
       - ./app.py:/app.py:ro
+      - ./crawling.py:/crawling.py:ro
       - ./.env:/.env:ro
+      - ./log:/log
     environment:
       - CHANNEL=$CHANNEL
       - OPENAI_API_KEY=$OPENAI_API_KEY

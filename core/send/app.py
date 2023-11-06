@@ -29,6 +29,7 @@ def index():
         result = client.chat_postMessage(
             channel = channel,
             blocks = blocks,
+            unfurl_links=False,
         )
     else:
         return "Bad Request: You must specify 'text' or 'blocks'.", 400    
