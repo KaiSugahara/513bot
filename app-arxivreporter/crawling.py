@@ -28,7 +28,7 @@ if __name__ == '__main__':
         query_cat = "%28" + " OR ".join([f'cat:{cat}' for cat in cats]) + "%29"
 
         # Query regarding Keywords
-        words = ["recommend"]
+        words = ["recommender", "recommendation"]
         query_word = "%28" + " OR ".join([f'all:{w}' for w in words]) + "%29"
 
         # Query regarding Date
